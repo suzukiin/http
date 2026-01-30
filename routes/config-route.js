@@ -11,6 +11,7 @@ router.get('/', async (req, res) => {
 
     res.render('config', {
         virtualInputs,
+        activePage: 'config',
         // Mantemos os dados da navbar
         hostname: telemetry.hostname,
         localization: telemetry.localization,
@@ -61,5 +62,7 @@ router.post('/delete', async (req, res) => {
     await dbService.deleteVirtualInput(id);
     res.redirect('/config?success=true');
 });
+
+module.exports = router;
 
 module.exports = router;

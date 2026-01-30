@@ -31,9 +31,11 @@ app.set('views', path.join(__dirname, 'views'));
 
 const homeRoute = require('./routes/home-route');
 const configRoute = require('./routes/config-route');
+const natRoute = require('./routes/nat-route');
 
 app.use('/', homeRoute);
 app.use('/config', configRoute);
+app.use('/nat', natRoute);
 
 // Centralized Error Handler
 app.use((err, req, res, next) => {

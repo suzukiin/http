@@ -15,6 +15,15 @@ function getDbConnection() {
                 logger.error('Erro ao conectar ao banco de dados:', err);
             } else {
                 logger.info('Conectado ao SQLite com sucesso (Modo RW).');
+                // Criar tabela NAT se não existir
+                db.run(`CREATE TABLE IF NOT EXISTS nat_rules (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    descricao TEXT NOT NULL,
+                    public_port INTEGER NOT NULL,
+                    private_ip TEXT NOT NULL,
+                    private_port INTEGER NOT NULL,
+                    protocol TEXT NOT NULL CHECK(protocol IN ('TCP', 'UDP', 'BOTH'))
+                )`);
             }
         });
     }
@@ -91,6 +100,52 @@ exports.deleteVirtualInput = async (id) => {
                 logger.error('Erro ao deletar input virtual:', err);
                 return reject(err);
             }
+            resolve(this.changes);
+        });
+    });
+};
+
+// --- NAT RULES METHODS ---
+
+exports.getNatRules = async () => {
+    return new Promise((resolve, reject) => {
+        const connection = getDbConnection();
+        const query = `SELECT * FROM nat_rules`;
+        connection.all(query, [], (err, rows) => {
+            if (err) return reject(err);
+            resolve(rows || []);
+        });
+    });
+};
+
+exports.addNatRule = async (data) => {
+    return new Promise((resolve, reject) => {
+        const connection = getDbConnection();
+        const query = `INSERT INTO nat_rules (descricao, public_port, private_ip, private_port, protocol) VALUES (?, ?, ?, ?, ?)`;
+        connection.run(query, [data.descricao, data.public_port, data.private_ip, data.private_port, data.protocol], function(err) {
+            if (err) return reject(err);
+            resolve(this.lastID);
+        });
+    });
+};
+
+exports.updateNatRule = async (id, data) => {
+    return new Promise((resolve, reject) => {
+        const connection = getDbConnection();
+        const query = `UPDATE nat_rules SET descricao = ?, public_port = ?, private_ip = ?, private_port = ?, protocol = ? WHERE id = ?`;
+        connection.run(query, [data.descricao, data.public_port, data.private_ip, data.private_port, data.protocol, id], function(err) {
+            if (err) return reject(err);
+            resolve(this.changes);
+        });
+    });
+};
+
+exports.deleteNatRule = async (id) => {
+    return new Promise((resolve, reject) => {
+        const connection = getDbConnection();
+        const query = `DELETE FROM nat_rules WHERE id = ?`;
+        connection.run(query, [id], function(err) {
+            if (err) return reject(err);
             resolve(this.changes);
         });
     });
