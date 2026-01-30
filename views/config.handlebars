@@ -1,0 +1,217 @@
+<div class="container-fluid">
+    <div class="row">
+        {{> sidebar activePage='config'}}
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content" style="padding-top: 5.5rem;">
+            <!-- Header section -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-3 mb-4 border-bottom border-secondary border-opacity-25">
+                <div>
+                    <h1 class="h2 mb-0">Configurações do Sistema</h1>
+                    <p class="text-muted small mb-0 mt-1">Gerencie os inputs virtuais e mapeamentos SNMP (OID)</p>
+                </div>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <button type="button" class="btn btn-jupiter d-flex align-items-center" data-bs-toggle="collapse" data-bs-target="#collapseAddForm">
+                        <i class="bi bi-plus-lg me-2"></i> Novo Input
+                    </button>
+                </div>
+            </div>
+
+            {{#if success}}
+            <div class="alert alert-success alert-dismissible fade show bg-success bg-opacity-10 text-success border-success border-opacity-25 mb-4 border-0 shadow-sm" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i> Operação realizada com sucesso!
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {{/if}}
+
+            <!-- Add New Input Form (Collapsible) -->
+            <div class="collapse mb-5" id="collapseAddForm">
+                <div class="dash-card border-jupiter border-opacity-25 p-4 shadow-sm">
+                    <div class="d-flex align-items-center mb-4">
+                        <h5 class="mb-0 text-light">Adicionar Novo Recurso</h5>
+                    </div>
+                    
+                    <form action="/config/add" method="POST" class="row g-4">
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Descrição do Input</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary py-2" name="descricao" placeholder="Ex: Status Filtro Principal" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Tipo de Dado</label>
+                            <select class="form-select bg-dark text-light border-secondary py-2" name="tipo" id="tipoSelect" onchange="toggleMedidaFields(this, 'add')" required>
+                                <option value="status">Status</option>
+                                <option value="medidas">Medidas</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Endereço IP (Host)</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary font-mono py-2" name="ip" placeholder="192.168.x.x" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small text-uppercase fw-bold">OID SNMP</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary font-mono py-2" name="oid" placeholder="1.3.6.1.4.1..." required>
+                        </div>
+                        
+                        <!-- Extra fields for 'medidas' -->
+                        <div id="add-medida-fields" class="row g-4 mt-1" style="display: none;">
+                            <div class="col-md-2">
+                                <label class="form-label text-muted small text-uppercase fw-bold">Máscara (Mult)</label>
+                                <input type="number" step="0.01" class="form-control bg-dark text-light border-secondary" name="mascara" placeholder="1.0">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label text-muted small text-uppercase fw-bold">Unidade</label>
+                                <select class="form-select bg-dark text-light border-secondary" name="unidade">
+                                    <option value="°C">°C</option>
+                                    <option value="V">V</option>
+                                    <option value="A">A</option>
+                                    <option value="%">%</option>
+                                    <option value="W">W</option>
+                                    <option value="dBm">dBm</option>
+                                    <option value="Hz">Hz</option>
+                                    <option value="RPM">RPM</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-12 text-end border-top border-secondary border-opacity-10 pt-4 mt-4">
+                            <button type="button" class="btn btn-link text-muted me-3 text-decoration-none" data-bs-toggle="collapse" data-bs-target="#collapseAddForm">Cancelar</button>
+                            <button type="submit" class="btn btn-jupiter px-5 shadow">
+                                <i class="bi bi-save me-2"></i> Criar Recurso
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- List and Edit Inputs -->
+            <div class="dash-card p-0 overflow-hidden shadow-sm">
+                <div class="p-4 border-bottom border-secondary border-opacity-10 bg-opacity-5">
+                    <h5 class="mb-0 text-light d-flex align-items-center">
+                        <i class="bi bi-layers me-2 text-jupiter"></i> Recursos Ativos
+                        <span class="badge bg-jupiter bg-opacity-10  ms-3 font-mono" style="font-size: 0.7rem;">{{virtualInputs.length}} TOTAL</span>
+                    </h5>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-custom table-hover align-middle mb-0">
+                        <thead class="bg-dark bg-opacity-50">
+                            <tr>
+                                <th class="ps-4" style="width: 25%">Configuração Base</th>
+                                <th style="width: 15%">Tipo</th>
+                                <th style="width: 20%">Conectividade</th>
+                                <th style="width: 25%">OID / Parâmetros</th>
+                                <th class="text-end pe-4">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{#each virtualInputs}}
+                            <tr>
+                                <td class="ps-4">
+                                    <form id="form-edit-{{this.id}}" action="/config/update" method="POST">
+                                        <input type="hidden" name="id" value="{{this.id}}">
+                                        <input type="text" class="form-control form-control-sm bg-dark border-0 text-light fw-bold p-1 edit-input" 
+                                            name="descricao" value="{{this.descricao}}" style="box-shadow: none;">
+                                        <small class="text-muted font-mono" style="font-size: 0.65rem;">ID: #{{this.id}}</small>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm bg-transparent border-0 text-light font-mono edit-input" 
+                                        name="tipo" onchange="toggleMedidaFields(this, 'edit-{{this.id}}')" style="box-shadow: none;">
+                                        <option value="status" {{#if (eq this.tipo 'status')}}selected{{/if}}>STATUS</option>
+                                        <option value="medidas" {{#if (eq this.tipo 'medidas')}}selected{{/if}}>MEDIDAS</option>
+                                    </select>
+                                    <div class="mt-1">
+                                        {{#if (eq this.tipo 'status')}}
+                                        <span class="badge bg-info bg-opacity-10 text-info" style="font-size: 0.6rem;">DIGITAL</span>
+                                        {{else}}
+                                        <span class="badge bg-warning bg-opacity-10 text-warning" style="font-size: 0.6rem;">ANALOG</span>
+                                        {{/if}}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <input type="text" class="form-control form-control-sm bg-transparent border-0 text-light font-mono p-1 edit-input" 
+                                            name="ip" value="{{this.ip}}" style="box-shadow: none;">
+                                        <span class="text-muted small"><i class="bi bi-cpu me-1"></i>Device Host</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <input type="text" class="form-control form-control-sm bg-transparent border-0 text-light font-mono p-1 edit-input" 
+                                            name="oid" value="{{this.oid}}" title="{{this.oid}}" style="box-shadow: none;">
+                                        
+                                        <div id="edit-{{this.id}}-medida-fields" class="mt-2" style="display: {{#if (eq this.tipo 'medidas')}}block{{else}}none{{/if}};">
+                                            <div class="d-flex gap-2">
+                                                <input type="number" step="0.1" name="mascara" value="{{this.mascara}}" class="form-control form-control-xs bg-dark text-muted border-secondary" placeholder="Mult" style="width: 60px; font-size: 0.7rem;">
+                                                <select name="unidade" class="form-select form-select-xs bg-dark text-muted border-secondary font-mono edit-input" style="width: 75px; font-size: 0.7rem;">
+                                                    <option value="°C" {{#if (eq this.unidade '°C')}}selected{{/if}}>°C</option>
+                                                    <option value="V" {{#if (eq this.unidade 'V')}}selected{{/if}}>V</option>
+                                                    <option value="A" {{#if (eq this.unidade 'A')}}selected{{/if}}>A</option>
+                                                    <option value="%" {{#if (eq this.unidade '%')}}selected{{/if}}>%</option>
+                                                    <option value="W" {{#if (eq this.unidade 'W')}}selected{{/if}}>W</option>
+                                                    <option value="dBm" {{#if (eq this.unidade 'dBm')}}selected{{/if}}>dBm</option>
+                                                    <option value="Hz" {{#if (eq this.unidade 'Hz')}}selected{{/if}}>Hz</option>
+                                                    <option value="RPM" {{#if (eq this.unidade 'RPM')}}selected{{/if}}>RPM</option>
+                                                    
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group">
+                                        <button type="submit" form="form-edit-{{this.id}}" class="btn btn-sm btn-outline-success border-0 rounded-circle" title="Salvar Alterações">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </form>
+                                    <form action="/config/delete" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir?')">
+                                        <input type="hidden" name="id" value="{{this.id}}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-circle" title="Excluir">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {{/each}}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {{#unless virtualInputs.length}}
+                <div class="p-5 text-center">
+                    <i class="bi bi-folder-x fs-1 text-muted opacity-25"></i>
+                    <p class="text-muted mt-3">Nenhum recurso cadastrado no momento.</p>
+                </div>
+                {{/unless}}
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    function toggleMedidaFields(select, mode) {
+        const fields = document.getElementById(mode + '-medida-fields');
+        if (fields) {
+            fields.style.display = select.value === 'medidas' ? (mode === 'add' ? 'flex' : 'block') : 'none';
+        }
+    }
+
+    // Estilização dinâmica para inputs de edição quando alterados
+    document.querySelectorAll('.edit-input').forEach(input => {
+        input.addEventListener('change', function() {
+            this.classList.add('text-jupiter');
+            this.closest('tr').classList.add('bg-jupiter', 'bg-opacity-5');
+        });
+    });
+</script>
+
+<style>
+    .form-control-xs, .form-select-xs {
+        padding: 0.1rem 0.3rem;
+        height: auto;
+    }
+    .edit-input:focus {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-bottom: 1px solid var(--jupiter-color) !important;
+        border-radius: 0;
+    }
+</style>

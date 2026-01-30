@@ -9,11 +9,12 @@ let db;
 
 function getDbConnection() {
     if (!db) {
-        db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
+        // Removido OPEN_READONLY para permitir INSERT/UPDATE/DELETE
+        db = new sqlite3.Database(dbPath, (err) => {
             if (err) {
                 logger.error('Erro ao conectar ao banco de dados:', err);
             } else {
-                logger.info('Conectado ao SQLite com sucesso.');
+                logger.info('Conectado ao SQLite com sucesso (Modo RW).');
             }
         });
     }
@@ -31,6 +32,66 @@ exports.getVirtualInputs = async () => {
                 return reject(err);
             }
             resolve(rows || []);
+        });
+    });
+};
+
+exports.updateVirtualInput = async (id, data) => {
+    return new Promise((resolve, reject) => {
+        const connection = getDbConnection();
+        const query = `UPDATE virtual_inputs SET oid = ?, descricao = ?, ip = ?, tipo = ?, mascara = ?, unidade = ? WHERE id = ?`;
+        
+        connection.run(query, [
+            data.oid, 
+            data.descricao, 
+            data.ip, 
+            data.tipo, 
+            data.mascara || null, 
+            data.unidade || null, 
+            id
+        ], function(err) {
+            if (err) {
+                logger.error('Erro ao atualizar input virtual:', err);
+                return reject(err);
+            }
+            resolve(this.changes);
+        });
+    });
+};
+
+exports.addVirtualInput = async (data) => {
+    return new Promise((resolve, reject) => {
+        const connection = getDbConnection();
+        const query = `INSERT INTO virtual_inputs (oid, descricao, ip, tipo, mascara, unidade) VALUES (?, ?, ?, ?, ?, ?)`;
+        
+        connection.run(query, [
+            data.oid, 
+            data.descricao, 
+            data.ip, 
+            data.tipo, 
+            data.mascara || null, 
+            data.unidade || null
+        ], function(err) {
+            if (err) {
+                logger.error('Erro ao adicionar novo input virtual:', err);
+                return reject(err);
+            }
+            resolve(this.lastID);
+        });
+    });
+};
+
+exports.deleteVirtualInput = async (id) => {
+    return new Promise((resolve, reject) => {
+        const connection = getDbConnection();
+        const query = `DELETE FROM virtual_inputs WHERE id = ?`;
+        
+        connection.run(query, [id], function(err) {
+            if (err) {
+                logger.error('Erro ao deletar input virtual:', err);
+                return reject(err);
+            }
+            resolve(this.changes);
         });
     });
 };

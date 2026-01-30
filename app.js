@@ -20,14 +20,20 @@ app.use(morgan('combined', { stream: { write: message => logger.info(message.tri
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.engine('handlebars', handlebars.engine());
+app.engine('handlebars', handlebars.engine({
+    helpers: {
+        eq: (a, b) => a === b
+    }
+}));
 app.set('view engine', 'handlebars');
 app.use(express.static(path.join(__dirname, 'public')));
 app.set('views', path.join(__dirname, 'views'));
 
 const homeRoute = require('./routes/home-route');
+const configRoute = require('./routes/config-route');
 
 app.use('/', homeRoute);
+app.use('/config', configRoute);
 
 // Centralized Error Handler
 app.use((err, req, res, next) => {
